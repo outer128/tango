@@ -19,7 +19,7 @@
         }
         .keyboard {
             display: grid;
-            grid-template-columns: repeat(10, 50px);
+            grid-template-columns: repeat(11, 50px);
             gap: 5px;
             width: max-content;
         }
@@ -190,7 +190,7 @@
                     const nc = c + dc;
                     
                     // 盤面の範囲内かチェック
-                    if (nr >= 0 && nr < 5 && nc >= 0 && nc < 10) {
+                    if (nr >= 0 && nr < 5 && nc >= 0 && nc < 11) {
                         const char = grid[nr][nc];
                         if (char) { // 空白マスでなければ追加
                             neighbors.push(char);
