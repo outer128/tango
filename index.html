@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本語単語検索</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            max-width: 800px;
+            color: #333;
+        }
+        .keyboard-wrapper {
+            overflow-x: auto;
+            max-width: 100%;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+        .keyboard {
+            display: grid;
+            grid-template-columns: repeat(10, 50px);
+            gap: 5px;
+            width: max-content;
+        }
+        .key {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: pointer;
+            font-size: 20px;
+            user-select: none;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        .key:hover {
+            background-color: #e9e9e9;
+        }
+        .key.empty {
+            background-color: transparent;
+            border: none;
+            cursor: default;
+        }
+        .badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background-color: #e74c3c;
+            color: white;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 10px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+        button:hover {
+            background-color: #f0f0f0;
+        }
+        .result-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .result-item {
+            padding: 5px 10px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .input-sequence {
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h2>日本語単語検索</h2>
+    <p>50音表のボタンを押して文字を入力し、「検索」を押してください。<br>
+    ※n番目に押されたボタンの周囲（最大8方向）の文字からn文字目を選び、考えられる全ての組み合わせを表示します。</p>
+    
+    <div class="input-sequence" id="input-sequence">入力: </div>
+    
+    <div class="keyboard-wrapper">
+        <div class="keyboard" id="keyboard"></div>
+    </div>
+    
+    <div class="controls">
+        <button onclick="search()">検索</button>
+        <button onclick="clearInput()">クリア</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        // 50音表の配列定義（nullは空白マス）
+        const grid = [
+            ['あ', 'か', 'さ', 'た', 'な', 'は', 'ま', 'や', 'ら', 'わ'],
+            ['い', 'き', 'し', 'ち', 'に', 'ひ', 'み', null, 'り', 'を'],
+            ['う', 'く', 'す', 'つ', 'ぬ', 'ふ', 'む', 'ゆ', 'る', 'ん'],
+            ['え', 'け', 'せ', 'て', 'ね', 'へ', 'め', null, 'れ', null],
+            ['お', 'こ', 'そ', 'と', 'の', 'ほ', 'も', 'よ', 'ろ', null]
+        ];
+
+        let sequence = []; // 入力された文字と座標の履歴
+
+        // キーボードの描画関数
+        function renderKeyboard() {
+            const container = document.getElementById('keyboard');
+            container.innerHTML = '';
+            
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 10; c++) {
+                    const char = grid[r][c];
+                    const div = document.createElement('div');
+                    
+                    if (char) {
+                        div.className = 'key';
+                        div.innerText = char;
+                        div.onclick = () => handleKeyClick(r, c);
+                        
+                        // 押された順番を特定してバッジを付与
+                        const orders = [];
+                        sequence.forEach((item, index) => {
+                            if (item.r === r && item.c === c) {
+                                orders.push(index + 1);
+                            }
+                        });
+                        
+                        if (orders.length > 0) {
+                            const badge = document.createElement('div');
+                            badge.className = 'badge';
+                            badge.innerText = orders.join(', ');
+                            div.appendChild(badge);
+                        }
+                    } else {
+                        // 空白マス
+                        div.className = 'key empty';
+                    }
+                    container.appendChild(div);
+                }
+            }
+            
+            // 入力履歴のテキスト更新
+            document.getElementById('input-sequence').innerText = 
+                '入力: ' + sequence.map(s => s.char).join('');
+        }
+
+        // キーがクリックされたときの処理
+        function handleKeyClick(r, c) {
+            const char = grid[r][c];
+            if (!char) return;
+            sequence.push({char, r, c});
+            renderKeyboard();
+        }
+
+        // 入力のクリア
+        function clearInput() {
+            sequence = [];
+            document.getElementById('results').innerHTML = '';
+            renderKeyboard();
+        }
+
+        // 指定した座標の周囲（最大8方向）の文字を取得する関数
+        function getNeighbors(r, c) {
+            const neighbors = [];
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue; // 自分自身は除外
+                    
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    
+                    // 盤面の範囲内かチェック
+                    if (nr >= 0 && nr < 5 && nc >= 0 && nc < 10) {
+                        const char = grid[nr][nc];
+                        if (char) { // 空白マスでなければ追加
+                            neighbors.push(char);
+                        }
+                    }
+                }
+            }
+            return neighbors;
+        }
+
+        // 複数の配列から全ての組み合わせ（直積）を生成する再帰関数
+        function getCombinations(arrays) {
+            if (arrays.length === 0) return [];
+            if (arrays.length === 1) return arrays[0];
+            
+            const result = [];
+            const rest = getCombinations(arrays.slice(1));
+            
+            for (const c of arrays[0]) {
+                for (const r of rest) {
+                    result.push(c + r);
+                }
+            }
+            return result;
+        }
+
+        // 検索実行
+        function search() {
+            if (sequence.length === 0) {
+                alert('文字を入力してください。');
+                return;
+            }
+            
+            const candidatesList = [];
+            
+            // 各入力文字に対して周囲の文字リストを取得
+            sequence.forEach(item => {
+                const neighbors = getNeighbors(item.r, item.c);
+                candidatesList.push(neighbors);
+            });
+            
+            // 全ての組み合わせを生成
+            const results = getCombinations(candidatesList);
+            
+            // 結果を画面に出力
+            const resultDiv = document.getElementById('results');
+            resultDiv.innerHTML = `<h3>検索結果 (${results.length}件)</h3>`;
+            
+            const resultHTML = results.map(res => `<span class="result-item">${res}</span>`).join('');
+            resultDiv.innerHTML += `<div class="result-container">${resultHTML}</div>`;
+        }
+
+        // 起動時にキーボードを描画
+        renderKeyboard();
+    </script>
+</body>
+</html>
