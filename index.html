@@ -6,7 +6,7 @@
     <title>日本語単語検索</title>
     <style>
         body {
-            font-family: "Hiragino Mincho ProN", "MS PMincho", serif; /* 縦書きに合う明朝体 */
+            font-family: "Hiragino Mincho ProN", "MS PMincho", serif; 
             margin: 20px;
             max-width: 900px;
             color: #333;
@@ -109,10 +109,10 @@
 </head>
 <body>
     <h2>日本語単語検索</h2>
-    <div id="dict-status" class="dict-status loading">辞書(buta014.dic)を読み込んでいます...</div>
+    <div id="dict-status" class="dict-status loading">辞書を読み込んでいます...</div>
     
     <p>50音表のボタンを押して文字を入力し、「検索」を押してください。<br>
-    ※n番目に押されたボタンの周囲（最大8方向）の文字からn文字目を選び、生成された組み合わせのうち、<strong>辞書に存在する単語のみ</strong>を表示します。</p>
+    ※n番目に押されたボタンの周囲（最大8方向）の文字からn文字目を選び、生成された組み合わせのうち、辞書に存在する単語のみを表示します。</p>
     
     <div class="input-sequence" id="input-sequence">入力: </div>
     
@@ -138,17 +138,20 @@
                 // 同じリポジトリ内にある buta014.dic を読み込む
                 const response = await fetch('buta014.dic');
                 if (!response.ok) throw new Error('Network response was not ok');
-                const text = await response.text();
+
+                const buffer = await response.arrayBuffer();
+                const decoder = new TextDecoder('shift_jis');
+                const text = decoder.decode(buffer);
                 
                 // 改行で分割し、Setに格納（検索を高速化）
                 const words = text.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
                 dictionary = new Set(words);
                 
-                statusEl.innerText = `✅ 辞書読み込み完了（収録語数: ${dictionary.size.toLocaleString()}語）`;
+                statusEl.innerText = `辞書読み込み完了（収録語数: ${dictionary.size.toLocaleString()}語）`;
                 statusEl.classList.remove('loading');
                 statusEl.style.borderLeftColor = '#2ecc71';
             } catch (error) {
-                statusEl.innerText = '⚠️ 辞書ファイル(buta014.dic)の読み込みに失敗しました。ファイルが正しく配置されているか確認してください。';
+                statusEl.innerText = '⚠️ 辞書ファイルの読み込みに失敗しました。';
                 statusEl.style.borderLeftColor = '#e74c3c';
                 statusEl.style.backgroundColor = '#fdf2f0';
                 console.error('Dictionary load error:', error);
